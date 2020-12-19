@@ -1,11 +1,13 @@
 import os
 import numpy as np
 from tqdm import tqdm
-from stable_baselines import PPO2
+#from stable_baselines import PPO2
 from navrep.envs.navreptrainencodedenv import NavRepTrainEncodedEnv
 
 from crowd_sim.envs.utils.info import Timeout, ReachGoal, Danger, Collision, CollisionOtherAgent
 from navrep.tools.commonargs import parse_common_args
+
+from stable_baselines3 import PPO
 
 class NavRepCPolicy(object):
     """ wrapper for gym policies """
@@ -15,7 +17,7 @@ class NavRepCPolicy(object):
         else:
             self.model_path = os.path.expanduser(
                 "~/navrep/models/gym/navreptrainencodedenv_latest_PPO_ckpt")
-            self.model = PPO2.load(self.model_path)
+            self.model = PPO.load(self.model_path)
             print("Model '{}' loaded".format(self.model_path))
 
     def act(self, obs):

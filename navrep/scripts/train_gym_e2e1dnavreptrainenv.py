@@ -1,13 +1,17 @@
 from datetime import datetime
 import os
 
-from stable_baselines import PPO2
-from stable_baselines.common.vec_env import SubprocVecEnv, DummyVecEnv
+#from stable_baselines import PPO2
+#from stable_baselines.common.vec_env import SubprocVecEnv, DummyVecEnv
 
 from navrep.tools.custom_policy import Custom1DPolicy, ARCH, _C
 from navrep.envs.e2eenv import E2E1DNavRepEnv
 from navrep.tools.sb_eval_callback import NavrepEvalCallback
 from navrep.tools.commonargs import parse_common_args
+
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from navrep.scripts.custom_policy_sb3 import CustomMlp
 
 if __name__ == "__main__":
     args, _ = parse_common_args()
@@ -33,7 +37,7 @@ if __name__ == "__main__":
     if TRAIN_STEPS is None:
         TRAIN_STEPS = 60 * MILLION
 
-    N_ENVS = 6
+    N_ENVS = 1
     if args.debug:
         env = DummyVecEnv([lambda: E2E1DNavRepEnv(silent=True, scenario='train')]*N_ENVS)
     else:
@@ -44,7 +48,7 @@ if __name__ == "__main__":
         return E2E1DNavRepEnv(silent=True, scenario='test')
     cb = NavrepEvalCallback(eval_env, test_env_fn=test_env_fn,
                             logpath=LOGPATH, savepath=MODELPATH, verbose=1)
-    model = PPO2(Custom1DPolicy, env, verbose=0)
+    model = PPO(CustomMlp, env, verbose=0)
     model.learn(total_timesteps=TRAIN_STEPS+1, callback=cb)
     obs = env.reset()
 

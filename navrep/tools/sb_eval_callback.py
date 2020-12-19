@@ -1,8 +1,11 @@
 import numpy as np
 import time
 from pandas import DataFrame
-from stable_baselines.common.callbacks import BaseCallback
-from stable_baselines.common.vec_env import VecEnv
+#from stable_baselines.common.callbacks import BaseCallback
+#from stable_baselines.common.vec_env import VecEnv
+
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.vec_env import VecEnv
 
 from navrep.scripts.test_navrep import run_test_episodes, NavRepCPolicy
 
