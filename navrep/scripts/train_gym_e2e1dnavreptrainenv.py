@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import torch as th
 
 #from stable_baselines import PPO2
 #from stable_baselines.common.vec_env import SubprocVecEnv, DummyVecEnv
@@ -11,7 +12,7 @@ from navrep.tools.commonargs import parse_common_args
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
-from navrep.scripts.custom_policy_sb3 import CustomMlp
+from navrep.scripts.custom_policy_sb3 import CustomMlp, CustomCNN
 
 ###HYPERPARAMETER###
 gamma = 0.99
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     if TRAIN_STEPS is None:
         TRAIN_STEPS = 60 * MILLION
 
-    N_ENVS = 4
+    N_ENVS = 1
     if args.debug:
         env = DummyVecEnv([lambda: E2E1DNavRepEnv(silent=True, scenario='train')]*N_ENVS)
     else:
@@ -61,9 +62,18 @@ if __name__ == "__main__":
         return E2E1DNavRepEnv(silent=True, scenario='test')
     cb = NavrepEvalCallback(eval_env, test_env_fn=test_env_fn,
                             logpath=LOGPATH, savepath=MODELPATH, verbose=1)
-    model = PPO(CustomMlp, env, verbose=0, gamma=gamma, n_steps=n_steps, ent_coef=ent_coef,
-                learning_rate=learning_rate, vf_coef=vf_coef, max_grad_norm=max_grad_norm, gae_lambda=lam,
-                batch_size=nminibatches, n_epochs=noptepochs, clip_range=cliprange)
+
+    # CUSTOM MLP
+    #
+    #model = PPO(CustomMlp, env, verbose=0, gamma=gamma, n_steps=n_steps, ent_coef=ent_coef,
+    #            learning_rate=learning_rate, vf_coef=vf_coef, max_grad_norm=max_grad_norm, gae_lambda=lam,
+    #            batch_size=nminibatches, n_epochs=noptepochs, clip_range=cliprange)
+
+    model = PPO("CnnPolicy", env, policy_kwargs=dict(
+        features_extractor_class=CustomCNN, features_extractor_kwargs=dict(features_dim=128),
+        net_arch=[dict(vf=[64], pi=[64])],
+        activation_fn=th.nn.ReLU
+        ), verbose=1)
     model.learn(total_timesteps=TRAIN_STEPS+1, callback=cb)
     obs = env.reset()
 

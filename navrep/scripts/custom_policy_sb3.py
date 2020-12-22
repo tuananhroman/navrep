@@ -7,10 +7,6 @@ from torch import nn
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
-HIDDEN_SHAPE_BODY: int=64
-HIDDEN_SHAPE_BODY_OUT: int=64
-HIDDEN_SHAPE_POLICY: int=32
-HIDDEN_SHAPE_VALUE: int=32
 
 class CustomNetwork(nn.Module):
     """
@@ -36,21 +32,22 @@ class CustomNetwork(nn.Module):
 
         # Body network
         self.body_net = nn.Sequential(
-            nn.Linear(feature_dim, HIDDEN_SHAPE_BODY),
+            nn.Linear(feature_dim, 64),
             nn.ReLU(),
-            nn.Linear(HIDDEN_SHAPE_BODY, HIDDEN_SHAPE_BODY_OUT),
+            nn.Linear(64, 64),
             nn.ReLU()
         )
 
         # Policy network
         self.policy_net = nn.Sequential(
-            nn.Linear(HIDDEN_SHAPE_BODY, last_layer_dim_pi),
+            nn.Linear(64, last_layer_dim_pi),
+            nn.ReLU()
         )
 
         # Value network
         self.value_net = nn.Sequential(
-            nn.Linear(HIDDEN_SHAPE_BODY, last_layer_dim_vf),
-
+            nn.Linear(64, last_layer_dim_vf),
+            nn.ReLU()
         )
 
     def forward(self, features: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
@@ -98,32 +95,30 @@ class CustomCNN(BaseFeaturesExtractor):
         This corresponds to the number of unit for the last layer.
     """
 
-    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
+    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 128):
         super(CustomCNN, self).__init__(observation_space, features_dim)
-        # We assume CxHxW images (channels first)
-        # Re-ordering will be done by pre-preprocessing or wrapper
-        n_input_channels = observation_space.shape[0]
 
         # Body network
         self.cnn = nn.Sequential(
-            nn.Conv1d(n_input_channels, 32, 5, 2),
+            nn.Conv1d(1, 32, 5, 2),
             nn.ReLU(),
             nn.Conv1d(32, 64, 3, 2),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Flatten(),
         )
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = self.cnn(
-                th.as_tensor(observation_space.sample()[None]).float()
-            ).shape[1]
+            tensor_forward = th.as_tensor(observation_space.sample()[None]).float()
+            n_flatten = self.cnn(tensor_forward.reshape(1, 1, observation_space.shape[0])).shape[1]
 
         self.linear = nn.Sequential(
             nn.Linear(n_flatten, 256),
             nn.ReLU(),
-            nn.Linear(256, 128),
+            nn.Linear(256, features_dim),
             nn.ReLU()
         )
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
+        observations = observations.reshape(-1, 1, self._observation_space.shape[0])
         return self.linear(self.cnn(observations))
