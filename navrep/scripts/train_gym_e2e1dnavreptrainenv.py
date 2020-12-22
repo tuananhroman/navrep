@@ -13,6 +13,19 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from navrep.scripts.custom_policy_sb3 import CustomMlp
 
+###HYPERPARAMETER###
+gamma = 0.99
+n_steps = 128
+ent_coef = 0.01
+learning_rate = 2.5e-4
+vf_coef = 0.5
+max_grad_norm = 0.5
+lam = 0.95
+nminibatches = 32
+noptepochs = 4
+cliprange = 0.2
+####################
+
 if __name__ == "__main__":
     args, _ = parse_common_args()
 
@@ -37,7 +50,7 @@ if __name__ == "__main__":
     if TRAIN_STEPS is None:
         TRAIN_STEPS = 60 * MILLION
 
-    N_ENVS = 1
+    N_ENVS = 4
     if args.debug:
         env = DummyVecEnv([lambda: E2E1DNavRepEnv(silent=True, scenario='train')]*N_ENVS)
     else:
@@ -48,7 +61,9 @@ if __name__ == "__main__":
         return E2E1DNavRepEnv(silent=True, scenario='test')
     cb = NavrepEvalCallback(eval_env, test_env_fn=test_env_fn,
                             logpath=LOGPATH, savepath=MODELPATH, verbose=1)
-    model = PPO(CustomMlp, env, verbose=0)
+    model = PPO(CustomMlp, env, verbose=0, gamma=gamma, n_steps=n_steps, ent_coef=ent_coef,
+                learning_rate=learning_rate, vf_coef=vf_coef, max_grad_norm=max_grad_norm, gae_lambda=lam,
+                batch_size=nminibatches, n_epochs=noptepochs, clip_range=cliprange)
     model.learn(total_timesteps=TRAIN_STEPS+1, callback=cb)
     obs = env.reset()
 
@@ -58,7 +73,7 @@ if __name__ == "__main__":
 
     del model
 
-    model = PPO2.load(MODELPATH)
+    model = PPO.load(MODELPATH)
 
     env = E2E1DNavRepEnv(silent=True, scenario='train')
     obs = env.reset()
