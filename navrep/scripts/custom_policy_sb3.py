@@ -7,11 +7,14 @@ from torch import nn
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
+_RS = 5
+_L = 1080
 
-class CustomNetwork(nn.Module):
+
+class CustomMlp_arena2d(nn.Module):
     """
-    Custom network for policy and value function.
-    It receives as input the features extracted by the feature extractor.
+    Custom Multilayer Perceptron for policy and value function.
+    Architecture was taken as reference from: https://github.com/ignc-research/arena2D/tree/master/arena2d-agents.
 
     :param feature_dim: dimension of the features extracted with the features_extractor (e.g. features from a CNN)
     :param last_layer_dim_pi: (int) number of units for the last layer of the policy network
@@ -24,7 +27,7 @@ class CustomNetwork(nn.Module):
             last_layer_dim_pi: int = 32,
             last_layer_dim_vf: int = 32,
     ):
-        super(CustomNetwork, self).__init__()
+        super(CustomMlp_arena2d, self).__init__()
 
         # Save output dimensions, used to create the distributions
         self.latent_dim_pi = last_layer_dim_pi
@@ -59,7 +62,10 @@ class CustomNetwork(nn.Module):
         return self.policy_net(body_x), self.value_net(body_x)
 
 
-class CustomMlp(ActorCriticPolicy):
+class CustomMlpPolicy(ActorCriticPolicy):
+    """
+    Policy using the custom Multilayer Perceptron.
+    """
     def __init__(
             self,
             observation_space: gym.spaces.Space,
@@ -70,35 +76,35 @@ class CustomMlp(ActorCriticPolicy):
             *args,
             **kwargs,
     ):
-
-        super(CustomMlp, self).__init__(
+        super(CustomMlpPolicy, self).__init__(
             observation_space,
             action_space,
             lr_schedule,
             net_arch,
             activation_fn,
-            # Pass remaining arguments to base class
             *args,
             **kwargs,
         )
-        # Disable orthogonal initialization
-        self.ortho_init = False
+        # Enable orthogonal initialization
+        self.ortho_init = True
 
     def _build_mlp_extractor(self) -> None:
-        self.mlp_extractor = CustomNetwork(self.features_dim)
+        self.mlp_extractor = CustomMlp_arena2d(self.features_dim)
 
 
-class CustomCNN(BaseFeaturesExtractor):
+class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
     """
+    Custom Convolutional Neural Network to serve as feature extractor ahead of the policy and value head.
+    Architecture was taken as reference from: https://github.com/RGring/drl_local_planner_ros_stable_baselines
+
     :param observation_space: (gym.Space)
     :param features_dim: (int) Number of features extracted.
         This corresponds to the number of unit for the last layer.
     """
 
     def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 128):
-        super(CustomCNN, self).__init__(observation_space, features_dim)
+        super(CustomCNN_drl_local_planner, self).__init__(observation_space, features_dim)
 
-        # Body network
         self.cnn = nn.Sequential(
             nn.Conv1d(1, 32, 5, 2),
             nn.ReLU(),
@@ -109,16 +115,73 @@ class CustomCNN(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            tensor_forward = th.as_tensor(observation_space.sample()[None]).float()
-            n_flatten = self.cnn(tensor_forward.reshape(1, 1, observation_space.shape[0])).shape[1]
+            # tensor_forward = th.as_tensor(observation_space.sample()[None]).float()
+            tensor_forward = th.randn(1, 1, _L)
+            n_flatten = self.cnn(tensor_forward).shape[1]
 
-        self.linear = nn.Sequential(
-            nn.Linear(n_flatten, 256),
+        self.fc_1 = nn.Sequential(
+            nn.Linear(n_flatten, 256-_RS),
             nn.ReLU(),
+        )
+
+        self.fc_2 = nn.Sequential(
             nn.Linear(256, features_dim),
             nn.ReLU()
         )
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         observations = observations.reshape(-1, 1, self._observation_space.shape[0])
-        return self.linear(self.cnn(observations))
+
+        laser_scan = observations[:, :, :-_RS]
+        robot_state = th.squeeze(observations[:, :, -_RS:], 1)
+
+        extracted_features = self.fc_1(self.cnn(laser_scan))
+        features = th.cat((extracted_features, robot_state), 1)
+
+        return self.fc_2(features)
+
+
+class CustomCNN_navrep(BaseFeaturesExtractor):
+    """
+    Custom Convolutional Neural Network to serve as feature extractor ahead of the policy and value head.
+    Architecture was taken as reference from: https://github.com/ethz-asl/navrep
+
+    :param observation_space: (gym.Space)
+    :param features_dim: (int) Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 32):
+        super(CustomCNN_navrep, self).__init__(observation_space, features_dim)
+
+        self.cnn = nn.Sequential(
+            nn.Conv1d(1, 32, 8, 4),
+            nn.ReLU(),
+            nn.Conv1d(32, 64, 9, 4),
+            nn.ReLU(),
+            nn.Conv1d(64, 128, 6, 4),
+            nn.ReLU(),
+            nn.Conv1d(128, 256, 4, 4),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            tensor_forward = th.randn(1, 1, _L)
+            n_flatten = self.cnn(tensor_forward).shape[1]
+
+        self.fc = nn.Sequential(
+            nn.Linear(n_flatten, features_dim-_RS),
+        )
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        observations = observations.reshape(-1, 1, self._observation_space.shape[0])
+
+        laser_scan = observations[:, :, :-_RS]
+        robot_state = th.squeeze(observations[:, :, -_RS:], 1)
+
+        extracted_features = self.fc(self.cnn(laser_scan))
+        features = th.cat((extracted_features, robot_state), 1)
+
+        return features

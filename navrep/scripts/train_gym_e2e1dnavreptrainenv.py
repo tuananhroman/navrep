@@ -12,7 +12,7 @@ from navrep.tools.commonargs import parse_common_args
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
-from navrep.scripts.custom_policy_sb3 import CustomMlp, CustomCNN
+from navrep.scripts.custom_policy_sb3 import CustomMlpPolicy, CustomCNN_navrep, CustomCNN_drl_local_planner
 
 ###HYPERPARAMETER###
 gamma = 0.99
@@ -22,7 +22,7 @@ learning_rate = 2.5e-4
 vf_coef = 0.5
 max_grad_norm = 0.5
 lam = 0.95
-nminibatches = 32
+nminibatches = 4
 noptepochs = 4
 cliprange = 0.2
 ####################
@@ -63,17 +63,36 @@ if __name__ == "__main__":
     cb = NavrepEvalCallback(eval_env, test_env_fn=test_env_fn,
                             logpath=LOGPATH, savepath=MODELPATH, verbose=1)
 
-    # CUSTOM MLP
-    #
-    #model = PPO(CustomMlp, env, verbose=0, gamma=gamma, n_steps=n_steps, ent_coef=ent_coef,
-    #            learning_rate=learning_rate, vf_coef=vf_coef, max_grad_norm=max_grad_norm, gae_lambda=lam,
-    #            batch_size=nminibatches, n_epochs=noptepochs, clip_range=cliprange)
+    """
+    # ---CUSTOM MLP ARENA2D---
+    model = PPO(CustomMlpPolicy, env, verbose=0, gamma=gamma, n_steps=n_steps, ent_coef=ent_coef,
+                learning_rate=learning_rate, vf_coef=vf_coef, max_grad_norm=max_grad_norm, gae_lambda=lam,
+                batch_size=nminibatches, n_epochs=noptepochs, clip_range=cliprange)
+    
+    
+    
+    # ---CNN NAVREP---
+    model = PPO("CnnPolicy", env, 
+                policy_kwargs=dict(
+                    features_extractor_class=CustomCNN_navrep, features_extractor_kwargs=dict(features_dim=32),
+                    net_arch=[dict(vf=[64, 64], pi=[64, 64])],
+                    activation_fn=th.nn.ReLU
+                ), 
+                gamma=gamma, n_steps=n_steps, ent_coef=ent_coef, learning_rate=learning_rate, vf_coef=vf_coef, 
+                max_grad_norm=max_grad_norm, gae_lambda=lam, batch_size=nminibatches, n_epochs=noptepochs, 
+                clip_range=cliprange, verbose=1)
+    """
 
-    model = PPO("CnnPolicy", env, policy_kwargs=dict(
-        features_extractor_class=CustomCNN, features_extractor_kwargs=dict(features_dim=128),
-        net_arch=[dict(vf=[64], pi=[64])],
-        activation_fn=th.nn.ReLU
-        ), verbose=1)
+    # ---CNN drl_local_planner---
+    model = PPO("CnnPolicy", env,
+                policy_kwargs=dict(
+                    features_extractor_class=CustomCNN_drl_local_planner,
+                    features_extractor_kwargs=dict(features_dim=128),
+                ),
+                gamma=gamma, n_steps=n_steps, ent_coef=ent_coef, learning_rate=learning_rate, vf_coef=vf_coef,
+                max_grad_norm=max_grad_norm, gae_lambda=lam, batch_size=nminibatches, n_epochs=noptepochs,
+                clip_range=cliprange, verbose=1)
+
     model.learn(total_timesteps=TRAIN_STEPS+1, callback=cb)
     obs = env.reset()
 
