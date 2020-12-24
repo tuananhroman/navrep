@@ -19,6 +19,10 @@ def populate_common_args(parser):
                         help="Picks which outputs from the world models to use")
     parser.add_argument('--n', type=int, help="for training, n_steps, for generation, n_sequences, etc..")
 
+def populate_cnn_args(parser):
+    parser.add_argument('--cnn', type=str, default='navrep', choices=['navrep', 'drl_local_planner'],
+                        help="Switches between CNN feature extractor")
+
 def populate_multiproc_args(parser):
     parser.add_argument('--subprocess', nargs=2, type=int,
                         help="""[i N] i is the id of this subprocess,
@@ -57,6 +61,11 @@ def check_rosnode_args(parsed_args):
 
 def parse_common_args(args=None, ignore_unknown=False):
     arg_populate_funcs = [populate_common_args]
+    arg_check_funcs = [check_common_args]
+    return parse_various_args(args, arg_populate_funcs, arg_check_funcs, ignore_unknown)
+
+def parse_common_cnn_args(args=None, ignore_unknown=False):
+    arg_populate_funcs = [populate_common_args, populate_cnn_args]
     arg_check_funcs = [check_common_args]
     return parse_various_args(args, arg_populate_funcs, arg_check_funcs, ignore_unknown)
 
