@@ -130,6 +130,10 @@ class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
         )
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
+        """
+        :return: (th.Tensor),
+            extracted features by the network 
+        """
         observations = observations.reshape(-1, 1, self._observation_space.shape[0])
 
         laser_scan = observations[:, :, :-_RS]
@@ -176,6 +180,10 @@ class CustomCNN_navrep(BaseFeaturesExtractor):
         )
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
+        """
+        :return: (th.Tensor) features,
+            extracted features by the network
+        """
         observations = observations.reshape(-1, 1, self._observation_space.shape[0])
 
         laser_scan = observations[:, :, :-_RS]
