@@ -132,7 +132,7 @@ class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
     def forward(self, observations: th.Tensor) -> th.Tensor:
         """
         :return: (th.Tensor),
-            extracted features by the network 
+            extracted features by the network
         """
         observations = observations.reshape(-1, 1, self._observation_space.shape[0])
 
