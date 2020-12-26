@@ -96,7 +96,7 @@ class CustomMlpPolicy(ActorCriticPolicy):
 class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
     """
     Custom Convolutional Neural Network to serve as feature extractor ahead of the policy and value network.
-    Architecture was taken as reference from: https://github.com/RGring/drl_local_planner_ros_stable_baselines
+    Architecture was taken as reference from: https://arxiv.org/abs/1808.03841
 
     :param observation_space: (gym.Space)
     :param features_dim: (int) Number of features extracted.
