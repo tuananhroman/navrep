@@ -95,7 +95,7 @@ class CustomMlpPolicy(ActorCriticPolicy):
 
 class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
     """
-    Custom Convolutional Neural Network to serve as feature extractor ahead of the policy and value head.
+    Custom Convolutional Neural Network to serve as feature extractor ahead of the policy and value network.
     Architecture was taken as reference from: https://github.com/RGring/drl_local_planner_ros_stable_baselines
 
     :param observation_space: (gym.Space)
@@ -135,7 +135,7 @@ class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
         :return: (th.Tensor),
             extracted features by the network
         """
-        observations = observations.reshape(-1, 1, self._observation_space.shape[0])
+        observations = observations.transpose(2, 1)
 
         laser_scan = observations[:, :, :-_RS]
         robot_state = th.squeeze(observations[:, :, -_RS:], 1)
@@ -195,7 +195,7 @@ class CustomCNN_navrep(BaseFeaturesExtractor):
         :return: (th.Tensor) features,
             extracted features by the network
         """
-        observations = observations.reshape(-1, 1, self._observation_space.shape[0])
+        observations = observations.transpose(2, 1)
 
         laser_scan = observations[:, :, :-_RS]
         robot_state = th.squeeze(observations[:, :, -_RS:], 1)
