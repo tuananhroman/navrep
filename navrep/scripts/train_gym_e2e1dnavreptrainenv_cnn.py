@@ -8,7 +8,7 @@ from navrep.tools.commonargs import parse_common_cnn_args
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
-from navrep.scripts.custom_policy_sb3 import CustomCNN_navrep, CustomCNN_drl_local_planner
+from navrep.scripts.custom_policy_sb3 import *
 
 ###HYPERPARAMETER###
 gamma = 0.99
@@ -18,13 +18,20 @@ learning_rate = 2.5e-4
 vf_coef = 0.5
 max_grad_norm = 0.5
 lam = 0.95
-nminibatches = 4
+nminibatches = 64
 noptepochs = 4
 cliprange = 0.2
 ####################
 
 if __name__ == "__main__":
     args, _ = parse_common_cnn_args()
+
+    if args.cnn == 'navrep':
+        policy_kwargs = policy_kwargs_navrep
+    elif args.cnn == 'drl_local_planner':
+        policy_kwargs = policy_kwargs_drl_local_planner
+    else:
+        raise Exception("Error while parsing arguments, couldn't find CNN extractor: {}".format(args.cnn))
 
     DIR = os.path.expanduser("~/navrep/models/gym")
     LOGDIR = os.path.expanduser("~/navrep/logs/gym")
@@ -38,20 +45,6 @@ if __name__ == "__main__":
     MODELPATH = os.path.join(DIR, LOGNAME + "_ckpt")
     MODELPATH2 = os.path.join(DIR, "e2e1dnavreptrainenv_latest_PPO_ckpt")
 
-    if args.cnn == 'navrep':
-        policy_kwargs=dict(
-            features_extractor_class=CustomCNN_navrep,
-            features_extractor_kwargs=dict(features_dim=32),
-            net_arch=[dict(vf=[64, 64], pi=[64, 64])], activation_fn=th.nn.ReLU
-        )
-    elif args.cnn == 'drl_local_planner':
-        policy_kwargs=dict(
-            features_extractor_class=CustomCNN_drl_local_planner,
-            features_extractor_kwargs=dict(features_dim=128),
-        )
-    else:
-        raise Exception("Error while parsing arguments, couldn't find CNN extractor: {}".format(args.cnn))
-
     if not os.path.exists(DIR):
         os.makedirs(DIR)
     if not os.path.exists(LOGDIR):
@@ -62,7 +55,7 @@ if __name__ == "__main__":
     if TRAIN_STEPS is None:
         TRAIN_STEPS = 60 * MILLION
 
-    N_ENVS = 1
+    N_ENVS = 4
     if args.debug:
         env = DummyVecEnv([lambda: E2E1DNavRepEnv(silent=True, scenario='train')]*N_ENVS)
     else:

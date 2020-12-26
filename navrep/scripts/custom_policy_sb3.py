@@ -66,6 +66,7 @@ class CustomMlpPolicy(ActorCriticPolicy):
     """
     Policy using the custom Multilayer Perceptron.
     """
+
     def __init__(
             self,
             observation_space: gym.spaces.Space,
@@ -120,7 +121,7 @@ class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
             n_flatten = self.cnn(tensor_forward).shape[1]
 
         self.fc_1 = nn.Sequential(
-            nn.Linear(n_flatten, 256-_RS),
+            nn.Linear(n_flatten, 256 - _RS),
             nn.ReLU(),
         )
 
@@ -143,6 +144,16 @@ class CustomCNN_drl_local_planner(BaseFeaturesExtractor):
         features = th.cat((extracted_features, robot_state), 1)
 
         return self.fc_2(features)
+
+
+"""
+Global constant to be passed as an argument to the PPO of Stable-Baselines3 in order to build both the policy
+and value network.
+
+:constant policy_drl_local_planner: (dict)
+"""
+policy_kwargs_drl_local_planner = dict(features_extractor_class=CustomCNN_drl_local_planner,
+                                       features_extractor_kwargs=dict(features_dim=128))
 
 
 class CustomCNN_navrep(BaseFeaturesExtractor):
@@ -176,7 +187,7 @@ class CustomCNN_navrep(BaseFeaturesExtractor):
             n_flatten = self.cnn(tensor_forward).shape[1]
 
         self.fc = nn.Sequential(
-            nn.Linear(n_flatten, features_dim-_RS),
+            nn.Linear(n_flatten, features_dim - _RS),
         )
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
@@ -193,3 +204,14 @@ class CustomCNN_navrep(BaseFeaturesExtractor):
         features = th.cat((extracted_features, robot_state), 1)
 
         return features
+
+
+"""
+Global constant to be passed as an argument to the PPO of Stable-Baselines3 in order to build both the policy
+and value network.
+
+:constant policy_kwargs_navrep: (dict)
+"""
+policy_kwargs_navrep = dict(features_extractor_class=CustomCNN_navrep,
+                            features_extractor_kwargs=dict(features_dim=32),
+                            net_arch=[dict(vf=[64, 64], pi=[64, 64])], activation_fn=th.nn.ReLU)
