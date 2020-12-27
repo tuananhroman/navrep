@@ -21,6 +21,8 @@ lam = 0.95
 nminibatches = 4
 noptepochs = 4
 cliprange = 0.2
+
+
 ####################
 
 
@@ -28,7 +30,10 @@ def parse_string(string: str):
     string_arr = string.split("-")
     int_list = []
     for string in string_arr:
-        int_list.append(int(string))
+        try:
+            int_list.append(int(string))
+        except:
+            raise Exception("Invalid argument format on: " + string)
     return int_list
 
 
@@ -58,7 +63,7 @@ if __name__ == "__main__":
         LOGDIR = "/tmp/navrep/logs/gym"
     START_TIME = datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
     if args.custom:
-        CONTROLLER_ARCH = "_B"+args.body+"_V"+args.vf+"_P"+args.pi
+        CONTROLLER_ARCH = "_B" + args.body + "_V" + args.vf + "_P" + args.pi
     else:
         CONTROLLER_ARCH = "_MLP_ARENA2D"
     LOGNAME = "e2e1dnavreptrainenv_" + START_TIME + "_PPO" + "_E2E1D" + CONTROLLER_ARCH
