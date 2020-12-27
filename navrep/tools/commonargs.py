@@ -23,6 +23,22 @@ def populate_cnn_args(parser):
     parser.add_argument('--cnn', type=str, default='navrep', choices=['navrep', 'drl_local_planner'],
                         help="Switches between CNN feature extractor")
 
+def populate_custom_mlp_args(parser):
+    parser.add_argument('--custom', type=bool, default=False,
+                        help="Activates the custom mlp creator, if true program arguments will be read for "
+                             "initialization of the network otherwise takes preconfigured network for training")
+    parser.add_argument('--body', type=str, default="64-64", help="Architecture of the shared latent network, usage: "
+                                                                  "[number]-[number]-.. each representing the number"
+                                                                  "of neurons per layer")
+    parser.add_argument('--pi', type=str, default="", help="Architecture of the latent policy network, usage: "
+                                                           "[number]-[number]-.. each representing the number of "
+                                                           "neurons per layer")
+    parser.add_argument('--vf', type=str, default="", help="Architecture of the latent value network, usage: "
+                                                           "[number]-[number]-.. each representing the number of "
+                                                           "neurons per layer")
+    parser.add_argument('--act_fn', type=str, default="relu", choices=['relu', 'sigmoid', 'tanh'],
+                        help="Activation function to be applied after each hidden layer")
+
 def populate_multiproc_args(parser):
     parser.add_argument('--subprocess', nargs=2, type=int,
                         help="""[i N] i is the id of this subprocess,
@@ -61,6 +77,11 @@ def check_rosnode_args(parsed_args):
 
 def parse_common_args(args=None, ignore_unknown=False):
     arg_populate_funcs = [populate_common_args]
+    arg_check_funcs = [check_common_args]
+    return parse_various_args(args, arg_populate_funcs, arg_check_funcs, ignore_unknown)
+
+def parse_common_mlp_args(args=None, ignore_unknown=False):
+    arg_populate_funcs = [populate_common_args, populate_custom_mlp_args]
     arg_check_funcs = [check_common_args]
     return parse_various_args(args, arg_populate_funcs, arg_check_funcs, ignore_unknown)
 
